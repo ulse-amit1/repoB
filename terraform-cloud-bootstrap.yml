@@ -22,7 +22,7 @@ on:
 
 jobs:
   terraform-cloud-bootstrap:
-    runs-on: self-hosted
+    runs-on: ubuntu:latest
     container:
       image: ubuntu:latest
     env:
