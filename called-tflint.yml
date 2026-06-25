@@ -1,0 +1,43 @@
+name: "[Called] TFLint"
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: "Target deployment environment"
+        required: true
+        type: string
+      working_directory:
+        description: "Folder where .tf files exist"
+        required: false
+        default: "."
+        type: string
+
+jobs:
+  tflint:
+    runs-on: self-hosted
+    container:
+      image: ghcr.io/terraform-linters/tflint:latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Debug Folder
+        run: |
+          echo "Scanning directory: ${{ inputs.working_directory }}"
+          ls -R ${{ inputs.working_directory }}
+
+      - name: TFLint Init and Run
+        run: |
+          tflint --chdir=${{ inputs.working_directory }} --recursive --format compact > tflint-report.txt || true
+          echo "--- TFLint Summary ---"
+          cat tflint-report.txt
+
+      - name: Upload TFLint Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tflint-report-${{ inputs.environment }}
+          path: tflint-report.txt
+          if-no-files-found: error
