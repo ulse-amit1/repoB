@@ -9,7 +9,7 @@ on:
 
     secrets:
       TF_API_TOKEN:
-        required: true
+        required: false
 
 jobs:
 
