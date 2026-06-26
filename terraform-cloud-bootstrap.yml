@@ -49,7 +49,7 @@ jobs:
           TFE_TOKEN: ${{ secrets.TF_API_TOKEN }}
         run: |
           echo "Length=${#TF_TOKEN_app_terraform_io}"
-            - name: Check if workspace already exists
+      - name: Check if workspace already exists
         id: workspace
         env:
           TFE_TOKEN: ${{ secrets.TF_API_TOKEN }}
