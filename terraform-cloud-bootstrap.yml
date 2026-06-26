@@ -71,10 +71,10 @@ jobs:
 
           if [ "$STATUS" = "200" ]; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "✅ Workspace already exists."
+            echo "Workspace already exists."
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
-            echo "❌ Workspace not found."
+            echo "Workspace not found."
           fi
 
       - name: Terraform Plan
