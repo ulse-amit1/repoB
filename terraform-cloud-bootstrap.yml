@@ -49,7 +49,27 @@ jobs:
           TFE_TOKEN: ${{ secrets.TF_API_TOKEN }}
         run: |
           echo "Length=${#TF_TOKEN_app_terraform_io}"
+            - name: Check if workspace already exists
+        id: workspace
+        env:
+          TFE_TOKEN: ${{ secrets.TF_API_TOKEN }}
+        run: |
+          STATUS=$(curl -s \
+            -o response.json \
+            -w "%{http_code}" \
+            -H "Authorization: Bearer $TFE_TOKEN" \
+            -H "Content-Type: application/vnd.api+json" \
+            https://app.terraform.io/api/v2/organizations/${{ inputs.organization }}/workspaces/${{ inputs.workspace_name }})
+
+          if [ "$STATUS" = "200" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Workspace '${{ inputs.workspace_name }}' already exists."
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Workspace '${{ inputs.workspace_name }}' not found."
+          fi
       - name: Terraform Plan
+        if: steps.workspace.outputs.exists == 'false'
         working-directory: terraform-cloud
         env:
           TFE_TOKEN: ${{ secrets.TF_API_TOKEN }}
