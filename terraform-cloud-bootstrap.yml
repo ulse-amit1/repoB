@@ -23,8 +23,10 @@ on:
 jobs:
   terraform-cloud-bootstrap:
     runs-on: ubuntu-latest
+
     container:
       image: ubuntu:latest
+
     env:
       TFE_TOKEN: ${{ secrets.TF_API_TOKEN }}
 
@@ -32,23 +34,26 @@ jobs:
       - name: Install Packages
         run: |
           apt-get update
-          apt-get install -y wget unzip curl git
+          apt-get install -y wget unzip curl git jq
+
       - uses: actions/checkout@v4
+
       - name: Install Terraform
         run: |
           TERRAFORM_VERSION="1.13.0"
+
           wget https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+
           unzip terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+
           mv terraform /usr/local/bin/
+
           terraform version
+
       - name: Terraform Init
         working-directory: terraform-cloud
         run: terraform init
-      - name: Debug Token
-        env:
-          TFE_TOKEN: ${{ secrets.TF_API_TOKEN }}
-        run: |
-          echo "Length=${#TF_TOKEN_app_terraform_io}"
+
       - name: Check if workspace already exists
         id: workspace
         env:
@@ -61,34 +66,41 @@ jobs:
             -H "Content-Type: application/vnd.api+json" \
             https://app.terraform.io/api/v2/organizations/${{ inputs.organization }}/workspaces/${{ inputs.workspace_name }})
 
+          echo "HTTP STATUS = $STATUS"
+          cat response.json
+
           if [ "$STATUS" = "200" ]; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-            echo "Workspace '${{ inputs.workspace_name }}' already exists."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "✅ Workspace already exists."
           else
-            echo "exists=false" >> $GITHUB_OUTPUT
-            echo "Workspace '${{ inputs.workspace_name }}' not found."
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "❌ Workspace not found."
           fi
+
       - name: Terraform Plan
         if: steps.workspace.outputs.exists == 'false'
         working-directory: terraform-cloud
-        env:
-          TFE_TOKEN: ${{ secrets.TF_API_TOKEN }}
         run: |
           terraform plan \
-          -var="organization=${{ inputs.organization }}" \
-          -var="workspace_name=${{ inputs.workspace_name }}" \
-          -var="azure_client_id=${{ secrets.AZURE_CLIENT_ID }}" \
-          -var="azure_tenant_id=${{ secrets.AZURE_TENANT_ID }}" \
-          -var="azure_subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+            -var="organization=${{ inputs.organization }}" \
+            -var="workspace_name=${{ inputs.workspace_name }}" \
+            -var="azure_client_id=${{ secrets.AZURE_CLIENT_ID }}" \
+            -var="azure_tenant_id=${{ secrets.AZURE_TENANT_ID }}" \
+            -var="azure_subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+
       - name: Terraform Apply
         if: steps.workspace.outputs.exists == 'false'
         working-directory: terraform-cloud
-        env:
-          TFE_TOKEN: ${{ secrets.TF_API_TOKEN }}
         run: |
           terraform apply -auto-approve \
-          -var="organization=${{ inputs.organization }}" \
-          -var="workspace_name=${{ inputs.workspace_name }}" \
-          -var="azure_client_id=${{ secrets.AZURE_CLIENT_ID }}" \
-          -var="azure_tenant_id=${{ secrets.AZURE_TENANT_ID }}" \
-          -var="azure_subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+            -var="organization=${{ inputs.organization }}" \
+            -var="workspace_name=${{ inputs.workspace_name }}" \
+            -var="azure_client_id=${{ secrets.AZURE_CLIENT_ID }}" \
+            -var="azure_tenant_id=${{ secrets.AZURE_TENANT_ID }}" \
+            -var="azure_subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+
+      - name: Skip Message
+        if: steps.workspace.outputs.exists == 'true'
+        run: |
+          echo "Workspace '${{ inputs.workspace_name }}' already exists."
+          echo "Skipping Terraform Plan and Apply."
