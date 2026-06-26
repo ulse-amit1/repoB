@@ -81,6 +81,7 @@ jobs:
           -var="azure_tenant_id=${{ secrets.AZURE_TENANT_ID }}" \
           -var="azure_subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}"
       - name: Terraform Apply
+        if: steps.workspace.outputs.exists == 'false'
         working-directory: terraform-cloud
         env:
           TFE_TOKEN: ${{ secrets.TF_API_TOKEN }}
