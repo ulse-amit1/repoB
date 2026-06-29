@@ -13,6 +13,10 @@ on:
         required: true
         type: string
 
+      module_name:
+        required: true
+        type: string
+
     secrets:
 
       TF_API_TOKEN:
