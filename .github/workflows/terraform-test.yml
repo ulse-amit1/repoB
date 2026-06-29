@@ -2,9 +2,7 @@ name: Terraform Test
 
 on:
   workflow_call:
-
     inputs:
-
       module_name:
         required: true
         type: string
@@ -12,16 +10,12 @@ on:
         # e.g. "resource-group" or "resource-group,virtual-network"
 
     secrets:
-
       TF_API_TOKEN:
         required: true
-
       AZURE_CLIENT_ID:
         required: true
-
       AZURE_TENANT_ID:
         required: true
-
       AZURE_SUBSCRIPTION_ID:
         required: true
 
@@ -36,23 +30,14 @@ jobs:
     runs-on: self-hosted
 
     container:
-
-      # Official Image
-      # https://hub.docker.com/r/hashicorp/terraform
-      image: hashicorp/terraform:1.13.0
+      image: hashicorp/terraform:1.13
 
     defaults:
-
       run:
         shell: sh
 
     env:
-
-      TF_IN_AUTOMATION: true
-      TF_INPUT: false
-
       TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
-
       ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
@@ -60,51 +45,14 @@ jobs:
 
     steps:
 
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Terraform Version
-        run: terraform version
-
-      - name: Terraform Init and Test
-
+      - name: Init and Test
         run: |
-
           echo "${{ inputs.module_name }}" | tr ',' '\n' | while IFS= read -r module; do
             module=$(echo "$module" | tr -d ' ')
-            echo "--------------------------------------------"
-            echo ">>> Processing module: $module"
-            echo "--------------------------------------------"
 
-            terraform -chdir="${module}" init \
-              -input=false \
-              -no-color
+            terraform -chdir="${module}" init -backend=false
 
-            terraform -chdir="${module}" test \
-              -test-directory=tests \
-              -no-color
+            terraform -chdir="${module}" test
           done
-
-      - name: Workflow Summary
-
-        if: always()
-
-        run: |
-
-          {
-
-            echo "# Terraform Test"
-
-            echo ""
-
-            echo "| Item | Value |"
-
-            echo "|------|-------|"
-
-            echo "| Modules | ${{ inputs.module_name }} |"
-
-            echo "| Test Directory | tests |"
-
-            echo "| Result | ${{ job.status }} |"
-
-          } >> $GITHUB_STEP_SUMMARY
