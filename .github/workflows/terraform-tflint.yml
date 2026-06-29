@@ -37,15 +37,21 @@ jobs:
       - name: TFLint Version
         run: tflint --version
 
-      - name: Initialize TFLint
-        working-directory: ${{ inputs.module_name }}/example
+      - name: Initialize and Run TFLint
         run: |
-          tflint --init
 
-      - name: Run TFLint
-        working-directory: ${{ inputs.module_name }}/example
-        run: |
-          tflint --recursive --format compact
+          echo "${{ inputs.module_name }}" | tr ',' '\n' | while IFS= read -r module; do
+            module=$(echo "$module" | tr -d ' ')
+            echo "--------------------------------------------"
+            echo ">>> Processing module: $module"
+            echo "--------------------------------------------"
+
+            (
+              cd "${module}/example" || exit 1
+              tflint --init
+              tflint --recursive --format compact
+            )
+          done
 
       - name: Workflow Summary
         if: always()
