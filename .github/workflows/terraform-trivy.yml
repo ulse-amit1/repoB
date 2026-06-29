@@ -8,6 +8,8 @@ on:
       module_name:
         required: true
         type: string
+        # Supports single or comma-separated module names
+        # e.g. "resource-group" or "resource-group,virtual-network"
 
 permissions:
   contents: read
@@ -22,7 +24,6 @@ jobs:
 
       # Official Image
       # https://hub.docker.com/r/aquasec/trivy
-      # v0.57.1 - last stable before defsec schema breaking changes in 0.58+
       image: aquasec/trivy:0.71.2
 
     defaults:
@@ -36,21 +37,25 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Trivy Version
-        run: |
-          trivy version
+        run: trivy version
 
       - name: Terraform Misconfiguration Scan
 
-        working-directory: ${{ inputs.module_name }}/example
-
         run: |
 
-          trivy config \
-            --severity HIGH,CRITICAL \
-            --exit-code 1 \
-            --skip-policy-update \
-            --quiet \
-            .
+          echo "${{ inputs.module_name }}" | tr ',' '\n' | while IFS= read -r module; do
+            module=$(echo "$module" | tr -d ' ')
+            echo "--------------------------------------------"
+            echo ">>> Scanning module: $module"
+            echo "--------------------------------------------"
+
+            trivy config \
+              --severity HIGH,CRITICAL \
+              --exit-code 1 \
+              --skip-policy-update \
+              --quiet \
+              "${module}/example"
+          done
 
       - name: Workflow Summary
 
@@ -60,19 +65,11 @@ jobs:
 
           {
             echo "# Terraform Trivy"
-
             echo ""
-
             echo "| Item | Value |"
-
             echo "|------|-------|"
-
-            echo "| Module | ${{ inputs.module_name }} |"
-
+            echo "| Modules | ${{ inputs.module_name }} |"
             echo "| Scanner | Trivy |"
-
             echo "| Severity | HIGH, CRITICAL |"
-
             echo "| Result | ${{ job.status }} |"
-
           } >> $GITHUB_STEP_SUMMARY
