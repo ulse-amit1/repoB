@@ -135,6 +135,7 @@ jobs:
           terraform plan \
             -input=false \
             -out=tfplan \
+            -var="tfe_token=${{ secrets.TF_API_TOKEN }}" \
             -var="organization=${{ inputs.organization }}" \
             -var="workspace_name=${{ inputs.workspace_name }}" \
             -var="azure_client_id=${{ secrets.AZURE_CLIENT_ID }}" \
