@@ -1,0 +1,76 @@
+name: Terraform Trivy
+
+on:
+  workflow_call:
+
+    inputs:
+
+      module_name:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+
+  trivy:
+
+    runs-on: self-hosted
+
+    container:
+
+      # Official Image
+      # https://hub.docker.com/r/aquasec/trivy
+      image: aquasec/trivy:0.64.1
+
+    defaults:
+
+      run:
+        shell: sh
+
+    steps:
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Trivy Version
+        run: |
+          trivy version
+
+      - name: Terraform Misconfiguration Scan
+
+        working-directory: ${{ inputs.module_name }}/example
+
+        run: |
+
+          trivy config \
+            --severity HIGH,CRITICAL \
+            --exit-code 1 \
+            --no-progress \
+            .
+
+      - name: Workflow Summary
+
+        if: always()
+
+        run: |
+
+          {
+            echo "# Terraform Trivy"
+
+            echo ""
+
+            echo "| Item | Value |"
+
+            echo "|------|-------|"
+
+            echo "| Module | ${{ inputs.module_name }} |"
+
+            echo "| Scanner | Trivy |"
+
+            echo "| Severity | HIGH, CRITICAL |"
+
+            echo "| Result | ${{ job.status }} |"
+
+          } >> $GITHUB_STEP_SUMMARY

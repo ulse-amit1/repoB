@@ -1,0 +1,95 @@
+name: Terraform OPA
+
+on:
+  workflow_call:
+
+    inputs:
+      module_name:
+        required: true
+        type: string
+
+    secrets:
+      GH_PAT:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+
+  opa:
+
+    runs-on: self-hosted
+
+    container:
+
+      # Official Image
+      # https://hub.docker.com/r/openpolicyagent/opa
+      image: openpolicyagent/opa:1.7.1-static
+
+    defaults:
+      run:
+        shell: sh
+
+    steps:
+
+      - name: Checkout Infrastructure Repository
+        uses: actions/checkout@v4
+
+      - name: Download Terraform Plan
+
+        uses: actions/download-artifact@v4
+
+        with:
+
+          name: tfplan-${{ inputs.module_name }}
+
+          path: artifact
+
+      - name: Checkout OPA Policies
+
+        uses: actions/checkout@v4
+
+        with:
+
+          repository: hcl-amit/repoA-policy
+
+          ref: main
+
+          token: ${{ secrets.GH_PAT }}
+
+          path: opa-policy
+
+      - name: Evaluate Policy
+
+        run: |
+
+          opa eval \
+            --format pretty \
+            --data opa-policy/OPA/${{ inputs.module_name }}/policy.rego \
+            --input artifact/tfplan.json \
+            "data.terraform.deny"
+
+      - name: Workflow Summary
+
+        if: always()
+
+        run: |
+
+          {
+
+            echo "# OPA Policy Check"
+
+            echo ""
+
+            echo "| Item | Value |"
+
+            echo "|------|-------|"
+
+            echo "| Module | ${{ inputs.module_name }} |"
+
+            echo "| Policy | policy.rego |"
+
+            echo "| Result | ${{ job.status }} |"
+
+          } >> $GITHUB_STEP_SUMMARY

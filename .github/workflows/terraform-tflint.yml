@@ -1,0 +1,60 @@
+name: Terraform TFLint
+
+on:
+  workflow_call:
+
+    inputs:
+
+      module_name:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+
+  tflint:
+
+    runs-on: self-hosted
+
+    container:
+
+      # Official Image
+      # https://github.com/terraform-linters/tflint/pkgs/container/tflint
+      image: ghcr.io/terraform-linters/tflint:v0.59.1
+
+    defaults:
+
+      run:
+        shell: sh
+
+    steps:
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: TFLint Version
+        run: tflint --version
+
+      - name: Initialize TFLint
+        working-directory: ${{ inputs.module_name }}/example
+        run: |
+          tflint --init
+
+      - name: Run TFLint
+        working-directory: ${{ inputs.module_name }}/example
+        run: |
+          tflint --recursive --format compact
+
+      - name: Workflow Summary
+        if: always()
+        run: |
+          {
+            echo "# Terraform TFLint"
+            echo ""
+            echo "| Item | Value |"
+            echo "|------|-------|"
+            echo "| Module | ${{ inputs.module_name }} |"
+            echo "| Result | ${{ job.status }} |"
+          } >> $GITHUB_STEP_SUMMARY
