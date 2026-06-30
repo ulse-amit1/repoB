@@ -38,27 +38,35 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+
       - name: Terraform Version
         run: terraform version
-      - name: Terraform Init
-        working-directory: ${{ inputs.module_name }}/example
+
+      - name: Terraform Init and Plan
         run: |
-          terraform init \
-            -input=false \
-            -no-color
-      - name: Terraform Plan
-        working-directory: ${{ inputs.module_name }}/example
-        run: |
-          terraform plan \
-            -input=false \
-            -no-color \
-            -out=tfplan
-      - name: Upload Plan
+          echo "${{ inputs.module_name }}" | tr ',' '\n' | while IFS= read -r module; do
+            module=$(echo "$module" | tr -d ' ')
+            echo "--------------------------------------------"
+            echo ">>> Processing module: $module"
+            echo "--------------------------------------------"
+
+            terraform -chdir="${module}/example" init \
+              -input=false \
+              -no-color
+
+            terraform -chdir="${module}/example" plan \
+              -input=false \
+              -no-color \
+              -out=tfplan
+          done
+
+      - name: Upload Plans
         uses: actions/upload-artifact@v4
         with:
           name: tfplan-${{ inputs.module_name }}
           path: |
-            ${{ inputs.module_name }}/example/tfplan
+            **/tfplan
+
       - name: Workflow Summary
         if: always()
         run: |
@@ -67,7 +75,6 @@ jobs:
             echo ""
             echo "| Item | Value |"
             echo "|------|-------|"
-            echo "| Module | ${{ inputs.module_name }} |"
-            echo "| Plan File | tfplan |"
+            echo "| Modules | ${{ inputs.module_name }} |"
             echo "| Result | ${{ job.status }} |"
           } >> $GITHUB_STEP_SUMMARY

@@ -52,46 +52,59 @@ jobs:
           token: ${{ secrets.GH_PAT }}
           path: opa-policy
 
-      - name: Resolve Policy File
+      - name: Evaluate Policies Per Module
         run: |
-          # Map module_name -> rego filename (naming differs from module names)
-          case "${{ inputs.module_name }}" in
-            virtual-network) policy_file="vnet.rego.txt" ;;
-            subnet)           policy_file="subnet.rego.txt" ;;
-            public-ip)        policy_file="public-ip.rego.txt" ;;
-            *)
-              echo "No policy mapping found for module: ${{ inputs.module_name }}"
+          echo "${{ inputs.module_name }}" | tr ',' '\n' | while IFS= read -r module; do
+            module=$(echo "$module" | tr -d ' ')
+            echo "--------------------------------------------"
+            echo ">>> Processing module: $module"
+            echo "--------------------------------------------"
+
+            case "$module" in
+              virtual-network) policy_file="virtual-network.rego" ;;
+              subnet)           policy_file="subnet.rego" ;;
+              public-ip)        policy_file="public-ip.rego" ;;
+              *)
+                echo "No policy mapping found for module: $module"
+                exit 1
+                ;;
+            esac
+
+            src="opa-policy/opa-policies/networking-policies/${policy_file}"
+
+            if [ ! -f "$src" ]; then
+              echo "Policy file not found: $src"
               exit 1
-              ;;
-          esac
+            fi
 
-          src="opa-policy/opa-policies/networking-policies/${policy_file}"
+            # OPA only recognizes .rego extension, source files are .rego
+            cp "$src" "./${module}-policy.rego"
 
-          if [ ! -f "$src" ]; then
-            echo "Policy file not found: $src"
-            exit 1
-          fi
-
-          # OPA only recognizes .rego extension, source files are .rego.txt
-          cp "$src" ./policy.rego
-
-      - name: Evaluate Policy
-        run: |
-          opa eval \
-            --format pretty \
-            --data ./policy.rego \
-            --input artifact/tfplan.json \
-            "data.terraform.deny"
+            opa eval \
+              --format pretty \
+              --data "./${module}-policy.rego" \
+              --input "artifact/${module}/example/tfplan.json" \
+              "data.terraform.deny"
+          done
 
       - name: Workflow Summary
+
         if: always()
+
         run: |
+
           {
+
             echo "# OPA Policy Check"
+
             echo ""
+
             echo "| Item | Value |"
+
             echo "|------|-------|"
-            echo "| Module | ${{ inputs.module_name }} |"
-            echo "| Policy | ${{ inputs.module_name }}.rego |"
+
+            echo "| Modules | ${{ inputs.module_name }} |"
+
             echo "| Result | ${{ job.status }} |"
+
           } >> $GITHUB_STEP_SUMMARY
