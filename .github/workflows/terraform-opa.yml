@@ -8,10 +8,6 @@ on:
         required: true
         type: string
 
-    secrets:
-      GH_PAT:
-        required: true
-
 permissions:
   contents: read
   id-token: write
@@ -55,7 +51,6 @@ jobs:
         with:
           repository: hcl-amit/Opa-repo
           ref: main
-          # token: ${{ secrets.GH_PAT }}
           path: opa-policy
 
       - name: Evaluate Policies Per Module
