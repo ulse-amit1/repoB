@@ -62,9 +62,9 @@ jobs:
             echo "--------------------------------------------"
 
             case "$module" in
-              virtual-network) policy_file="vnet.rego.txt" ;;
-              subnet)           policy_file="subnet.rego.txt" ;;
-              public-ip)        policy_file="public-ip.rego.txt" ;;
+              virtual-network) policy_file="virtual-network.rego" ;;
+              subnet)           policy_file="subnet.rego" ;;
+              public-ip)        policy_file="public-ip.rego" ;;
               *)
                 echo "No policy mapping found for module: $module"
                 exit 1
@@ -78,12 +78,9 @@ jobs:
               exit 1
             fi
 
-            # OPA only recognizes .rego extension, source files are .rego.txt
-            cp "$src" "./${module}-policy.rego"
-
             opa eval \
               --format pretty \
-              --data "./${module}-policy.rego" \
+              --data "$src" \
               --input "artifact/${module}/example/tfplan.json" \
               "data.terraform.deny"
           done
