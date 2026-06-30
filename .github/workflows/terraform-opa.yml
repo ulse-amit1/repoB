@@ -28,7 +28,10 @@ jobs:
       # NOTE: only the "-debug" variant ships with a shell (/bin/sh).
       # All other OPA image variants (default, -static, -rootless) have
       # NO shell at all, which breaks any `run:` step in this job.
-      image: openpolicyagent/opa:1.7.1-debug-debug
+      # 1.7.1-debug does not exist on Docker Hub (old version, debug
+      # builds aren't kept for older releases) — using 1.16.2-debug,
+      # which is confirmed to exist.
+      image: openpolicyagent/opa:1.16.2-debug-debug
 
     defaults:
       run:
