@@ -156,6 +156,13 @@ jobs:
             -auto-approve \
             tfplan
 
+      - name: Fix Workspace Permissions
+
+        if: always()
+
+        run: |
+          chown -R 1000:1000 "${{ github.workspace }}"
+
       - name: Summary
 
         if: always()
