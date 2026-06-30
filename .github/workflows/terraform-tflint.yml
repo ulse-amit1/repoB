@@ -24,6 +24,7 @@ jobs:
       # Official Image
       # https://github.com/terraform-linters/tflint/pkgs/container/tflint
       image: ghcr.io/terraform-linters/tflint:v0.59.1
+      options: --user 1000:1000
 
     defaults:
 
