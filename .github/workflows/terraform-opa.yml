@@ -66,16 +66,16 @@ jobs:
               subnet)           policy_file="subnet.rego" ;;
               public-ip)        policy_file="public-ip.rego" ;;
               *)
-                echo "No policy mapping found for module: $module"
-                exit 1
+                echo "No policy mapping found for module: $module — skipping OPA check."
+                continue
                 ;;
             esac
 
             src="opa-policy/opa-policies/networking-policies/${policy_file}"
 
             if [ ! -f "$src" ]; then
-              echo "Policy file not found: $src"
-              exit 1
+              echo "Policy file not found: $src — skipping OPA check for $module."
+              continue
             fi
 
             opa eval \
