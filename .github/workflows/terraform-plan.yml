@@ -59,6 +59,9 @@ jobs:
               -input=false \
               -no-color \
               -out=tfplan
+
+            terraform -chdir="${module}/example" show \
+              -json tfplan > "${module}/example/tfplan.json"
           done
 
       - name: Upload Plans
@@ -67,6 +70,7 @@ jobs:
           name: tfplan-${{ inputs.module_name }}
           path: |
             **/tfplan
+            **/tfplan.json
 
       - name: Workflow Summary
         if: always()
