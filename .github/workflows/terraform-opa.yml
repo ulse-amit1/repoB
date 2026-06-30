@@ -32,6 +32,7 @@ jobs:
       # builds aren't kept for older releases) — using 1.16.2-debug,
       # which is confirmed to exist.
       image: openpolicyagent/opa:1.16.2-debug
+      options: --user 1000:1000
 
     defaults:
       run:
