@@ -13,6 +13,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
 
@@ -25,6 +26,7 @@ jobs:
       # Official Image
       # https://hub.docker.com/r/aquasec/trivy
       image: aquasec/trivy:0.71.2
+      options: --user 1000:1000
 
     defaults:
 

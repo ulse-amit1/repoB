@@ -31,6 +31,7 @@ jobs:
 
     container:
       image: hashicorp/terraform:1.13
+      options: --user 1000:1000
 
     defaults:
       run:

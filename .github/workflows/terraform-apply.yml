@@ -36,6 +36,7 @@ jobs:
       # Official Image
       # https://hub.docker.com/r/hashicorp/terraform
       image: hashicorp/terraform:1.13.0
+      options: --user 1000:1000
 
     defaults:
       run:
