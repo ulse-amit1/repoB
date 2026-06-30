@@ -25,7 +25,9 @@ jobs:
 
       # Official Image
       # https://hub.docker.com/r/openpolicyagent/opa
-      image: openpolicyagent/opa:1.7.1-static
+      # NOTE: "-static" tag has no shell, breaks `run:` steps. Use the
+      # regular (non-static) tag which is Debian-based and has /bin/sh.
+      image: openpolicyagent/opa:1.7.1
 
     defaults:
       run:
@@ -37,59 +39,59 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download Terraform Plan
-
         uses: actions/download-artifact@v4
-
         with:
-
           name: tfplan-${{ inputs.module_name }}
-
           path: artifact
 
       - name: Checkout OPA Policies
-
         uses: actions/checkout@v4
-
         with:
-
-          repository: hcl-amit/repoA-policy
-
+          repository: hcl-amit/Opa-repo
           ref: main
-
           token: ${{ secrets.GH_PAT }}
-
           path: opa-policy
 
-      - name: Evaluate Policy
-
+      - name: Resolve Policy File
         run: |
+          # Map module_name -> rego filename (naming differs from module names)
+          case "${{ inputs.module_name }}" in
+            virtual-network) policy_file="vnet.rego.txt" ;;
+            subnet)           policy_file="subnet.rego.txt" ;;
+            public-ip)        policy_file="public-ip.rego.txt" ;;
+            *)
+              echo "No policy mapping found for module: ${{ inputs.module_name }}"
+              exit 1
+              ;;
+          esac
 
+          src="opa-policy/opa-policies/networking-policies/${policy_file}"
+
+          if [ ! -f "$src" ]; then
+            echo "Policy file not found: $src"
+            exit 1
+          fi
+
+          # OPA only recognizes .rego extension, source files are .rego.txt
+          cp "$src" ./policy.rego
+
+      - name: Evaluate Policy
+        run: |
           opa eval \
             --format pretty \
-            --data opa-policy/OPA/${{ inputs.module_name }}/policy.rego \
+            --data ./policy.rego \
             --input artifact/tfplan.json \
             "data.terraform.deny"
 
       - name: Workflow Summary
-
         if: always()
-
         run: |
-
           {
-
             echo "# OPA Policy Check"
-
             echo ""
-
             echo "| Item | Value |"
-
             echo "|------|-------|"
-
             echo "| Module | ${{ inputs.module_name }} |"
-
-            echo "| Policy | policy.rego |"
-
+            echo "| Policy | ${{ inputs.module_name }}.rego |"
             echo "| Result | ${{ job.status }} |"
-
           } >> $GITHUB_STEP_SUMMARY
