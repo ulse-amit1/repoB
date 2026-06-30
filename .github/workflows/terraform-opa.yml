@@ -55,7 +55,7 @@ jobs:
         with:
           repository: hcl-amit/Opa-repo
           ref: main
-          token: ${{ secrets.GH_PAT }}
+          # token: ${{ secrets.GH_PAT }}
           path: opa-policy
 
       - name: Evaluate Policies Per Module
