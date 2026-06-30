@@ -25,9 +25,10 @@ jobs:
 
       # Official Image
       # https://hub.docker.com/r/openpolicyagent/opa
-      # NOTE: "-static" tag has no shell, breaks `run:` steps. Use the
-      # regular (non-static) tag which is Debian-based and has /bin/sh.
-      image: openpolicyagent/opa:1.7.1
+      # NOTE: only the "-debug" variant ships with a shell (/bin/sh).
+      # All other OPA image variants (default, -static, -rootless) have
+      # NO shell at all, which breaks any `run:` step in this job.
+      image: openpolicyagent/opa:1.7.1-debug-debug
 
     defaults:
       run:
@@ -61,9 +62,9 @@ jobs:
             echo "--------------------------------------------"
 
             case "$module" in
-              virtual-network) policy_file="virtual-network.rego" ;;
-              subnet)           policy_file="subnet.rego" ;;
-              public-ip)        policy_file="public-ip.rego" ;;
+              virtual-network) policy_file="vnet.rego.txt" ;;
+              subnet)           policy_file="subnet.rego.txt" ;;
+              public-ip)        policy_file="public-ip.rego.txt" ;;
               *)
                 echo "No policy mapping found for module: $module"
                 exit 1
@@ -77,7 +78,7 @@ jobs:
               exit 1
             fi
 
-            # OPA only recognizes .rego extension, source files are .rego
+            # OPA only recognizes .rego extension, source files are .rego.txt
             cp "$src" "./${module}-policy.rego"
 
             opa eval \
