@@ -47,7 +47,6 @@ jobs:
 
       # https://hub.docker.com/_/ubuntu
       image: ubuntu:24.04
-      options: --user 1000:1000
 
     env:
 
