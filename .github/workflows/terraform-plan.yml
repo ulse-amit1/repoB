@@ -14,20 +14,40 @@ on:
         required: true
       AZURE_SUBSCRIPTION_ID:
         required: true
+
 permissions:
   id-token: write
   contents: read
+
 jobs:
+
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      module_list: ${{ steps.set-matrix.outputs.module_list }}
+    steps:
+      - id: set-matrix
+        run: |
+          MODULES=$(echo "${{ inputs.module_name }}" | tr -d ' ' | jq -R -c 'split(",")')
+          echo "module_list=$MODULES" >> $GITHUB_OUTPUT
+
   terraform-plan:
+    needs: setup
     runs-on: self-hosted
+
+    strategy:
+      matrix:
+        module: ${{ fromJson(needs.setup.outputs.module_list) }}
+      fail-fast: false
+
     container:
-      # Official Image
-      # https://hub.docker.com/r/hashicorp/terraform
       image: hashicorp/terraform:1.13.0
       options: --user 1000:1000
+
     defaults:
       run:
         shell: sh
+
     env:
       TF_IN_AUTOMATION: true
       TF_INPUT: false
@@ -36,7 +56,9 @@ jobs:
       ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       ARM_USE_OIDC: true
+
     steps:
+
       - name: Checkout Repository
         uses: actions/checkout@v4
 
@@ -44,33 +66,27 @@ jobs:
         run: terraform version
 
       - name: Terraform Init and Plan
+        working-directory: ${{ matrix.module }}/example
         run: |
-          echo "${{ inputs.module_name }}" | tr ',' '\n' | while IFS= read -r module; do
-            module=$(echo "$module" | tr -d ' ')
-            echo "--------------------------------------------"
-            echo ">>> Processing module: $module"
-            echo "--------------------------------------------"
+          terraform init \
+            -input=false \
+            -no-color
 
-            terraform -chdir="${module}/example" init \
-              -input=false \
-              -no-color
+          terraform plan \
+            -input=false \
+            -no-color \
+            -out=tfplan
 
-            terraform -chdir="${module}/example" plan \
-              -input=false \
-              -no-color \
-              -out=tfplan
+          terraform show \
+            -json tfplan > tfplan.json
 
-            terraform -chdir="${module}/example" show \
-              -json tfplan > "${module}/example/tfplan.json"
-          done
-
-      - name: Upload Plans
+      - name: Upload Plan
         uses: actions/upload-artifact@v4
         with:
-          name: tfplan-${{ inputs.module_name }}
+          name: tfplan-${{ matrix.module }}
           path: |
-            **/tfplan
-            **/tfplan.json
+            ${{ matrix.module }}/example/tfplan
+            ${{ matrix.module }}/example/tfplan.json
 
       - name: Workflow Summary
         if: always()
@@ -80,6 +96,6 @@ jobs:
             echo ""
             echo "| Item | Value |"
             echo "|------|-------|"
-            echo "| Modules | ${{ inputs.module_name }} |"
+            echo "| Module | ${{ matrix.module }} |"
             echo "| Result | ${{ job.status }} |"
           } >> $GITHUB_STEP_SUMMARY
