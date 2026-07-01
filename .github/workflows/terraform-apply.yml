@@ -2,22 +2,17 @@ name: Terraform Apply
 
 on:
   workflow_call:
-
     inputs:
       module_name:
         required: true
         type: string
-
     secrets:
       TF_API_TOKEN:
         required: true
-
       AZURE_CLIENT_ID:
         required: true
-
       AZURE_TENANT_ID:
         required: true
-
       AZURE_SUBSCRIPTION_ID:
         required: true
 
@@ -27,14 +22,26 @@ permissions:
 
 jobs:
 
-  terraform-apply:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      module_list: ${{ steps.set-matrix.outputs.module_list }}
+    steps:
+      - id: set-matrix
+        run: |
+          MODULES=$(echo "${{ inputs.module_name }}" | jq -R -c 'split(",")')
+          echo "module_list=$MODULES" >> $GITHUB_OUTPUT
 
+  terraform-apply:
+    needs: setup
     runs-on: self-hosted
 
-    container:
+    strategy:
+      matrix:
+        module: ${{ fromJson(needs.setup.outputs.module_list) }}
+      fail-fast: false
 
-      # Official Image
-      # https://hub.docker.com/r/hashicorp/terraform
+    container:
       image: hashicorp/terraform:1.13.0
       options: --user 1000:1000
 
@@ -43,12 +50,9 @@ jobs:
         shell: sh
 
     env:
-
       TF_IN_AUTOMATION: true
       TF_INPUT: false
-
       TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
-
       ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
@@ -62,58 +66,36 @@ jobs:
         run: terraform version
 
       - name: Terraform Init
-
-        working-directory: ${{ inputs.module_name }}/example
-
+        working-directory: ${{ matrix.module }}/example
         run: |
-
           terraform init \
             -input=false \
             -no-color
 
       - name: Download Terraform Plan
-
         uses: actions/download-artifact@v4
-
         with:
-
-          name: tfplan-${{ inputs.module_name }}
-
-          path: ${{ inputs.module_name }}/example
+          name: tfplan-${{ matrix.module }}
+          path: ${{ matrix.module }}/example
 
       - name: Terraform Apply
-
-        working-directory: ${{ inputs.module_name }}/example
-
+        working-directory: ${{ matrix.module }}/example
         run: |
-
           terraform apply \
             -input=false \
             -no-color \
             tfplan
 
       - name: Workflow Summary
-
         if: always()
-
         run: |
-
           {
-
             echo "# Terraform Apply"
-
             echo ""
-
             echo "| Item | Value |"
-
             echo "|------|-------|"
-
-            echo "| Module | ${{ inputs.module_name }} |"
-
+            echo "| Module | ${{ matrix.module }} |"
             echo "| Workspace | Terraform Cloud |"
-
             echo "| State | Remote |"
-
             echo "| Result | ${{ job.status }} |"
-
           } >> $GITHUB_STEP_SUMMARY
